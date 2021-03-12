@@ -1,11 +1,14 @@
 use graphics::Color;
 use tetra::graphics::mesh::{Mesh, ShapeStyle};
 use tetra::graphics::DrawParams;
+use tetra::input::Key;
 use tetra::math::Vec2;
-use tetra::{graphics, Context, ContextBuilder, State, TetraError};
+use tetra::{graphics, input, Context, ContextBuilder, State, TetraError};
 
 const WINDOW_WIDTH: f32 = 640.0;
 const WINDOW_HEIGHT: f32 = 480.0;
+
+const PLAYER_SPEED: f32 = 2.0;
 
 struct GameState {
     lake: Lake,
@@ -14,7 +17,7 @@ struct GameState {
 
 struct Player {
     mesh: Mesh,
-    draw_params: DrawParams,
+    position: Vec2<f32>,
 }
 
 impl Player {
@@ -22,12 +25,17 @@ impl Player {
         let radius = 5.0;
         let mesh = Mesh::circle(ctx, ShapeStyle::Fill, Vec2::zero(), radius)?;
         let center = Vec2::new(WINDOW_WIDTH / 2.0, WINDOW_HEIGHT / 2.0);
-        let draw_params = DrawParams::new().position(center).color(Color::WHITE);
-        Ok(Self { mesh, draw_params })
+        Ok(Self {
+            mesh,
+            position: center,
+        })
     }
 
     fn draw(&self, ctx: &mut Context) {
-        self.mesh.draw(ctx, self.draw_params.clone())
+        let draw_params = DrawParams::new()
+            .position(self.position)
+            .color(Color::WHITE);
+        self.mesh.draw(ctx, draw_params);
     }
 }
 
@@ -62,6 +70,22 @@ impl GameState {
 }
 
 impl State for GameState {
+    fn update(&mut self, ctx: &mut Context) -> Result<(), TetraError> {
+        if input::is_key_down(ctx, Key::W) {
+            self.player.position.y -= PLAYER_SPEED;
+        }
+        if input::is_key_down(ctx, Key::S) {
+            self.player.position.y += PLAYER_SPEED;
+        }
+        if input::is_key_down(ctx, Key::A) {
+            self.player.position.x -= PLAYER_SPEED;
+        }
+        if input::is_key_down(ctx, Key::D) {
+            self.player.position.x += PLAYER_SPEED;
+        }
+        Ok(())
+    }
+
     fn draw(&mut self, ctx: &mut Context) -> Result<(), TetraError> {
         graphics::clear(ctx, Color::rgb8(30, 240, 30));
 
