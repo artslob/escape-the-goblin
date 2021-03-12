@@ -21,15 +21,15 @@ struct GameState {
     result: GameResult,
     lake: Lake,
     player: Player,
-    goblin: Godlin,
+    goblin: Goblin,
 }
 
-struct Godlin {
+struct Goblin {
     mesh: Mesh,
     position: Vec2<f32>,
 }
 
-impl Godlin {
+impl Goblin {
     fn new(ctx: &mut Context) -> tetra::Result<Self> {
         let radius = 5.0;
         let mesh = Mesh::circle(ctx, ShapeStyle::Fill, Vec2::zero(), radius)?;
@@ -103,7 +103,7 @@ impl GameState {
             result: GameResult::Playing,
             lake: Lake::new(ctx)?,
             player: Player::new(ctx)?,
-            goblin: Godlin::new(ctx)?,
+            goblin: Goblin::new(ctx)?,
         })
     }
 }
