@@ -6,6 +6,12 @@ const WINDOW_HEIGHT: f32 = 480.0;
 
 struct GameState {}
 
+impl GameState {
+    fn new(_ctx: &mut Context) -> tetra::Result<Self> {
+        Ok(Self {})
+    }
+}
+
 impl State for GameState {
     fn draw(&mut self, ctx: &mut Context) -> Result<(), TetraError> {
         graphics::clear(ctx, Color::rgb8(30, 240, 30));
@@ -20,5 +26,5 @@ fn main() -> tetra::Result {
         WINDOW_HEIGHT as i32,
     )
     .build()?
-    .run(|_| Ok(GameState {}))
+    .run(GameState::new)
 }
