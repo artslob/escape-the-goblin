@@ -71,18 +71,32 @@ impl GameState {
 
 impl State for GameState {
     fn update(&mut self, ctx: &mut Context) -> Result<(), TetraError> {
-        if input::is_key_down(ctx, Key::W) {
-            self.player.position.y -= PLAYER_SPEED;
-        }
-        if input::is_key_down(ctx, Key::S) {
-            self.player.position.y += PLAYER_SPEED;
-        }
-        if input::is_key_down(ctx, Key::A) {
-            self.player.position.x -= PLAYER_SPEED;
-        }
-        if input::is_key_down(ctx, Key::D) {
-            self.player.position.x += PLAYER_SPEED;
-        }
+        let y = if input::is_key_down(ctx, Key::W) {
+            Some(-PLAYER_SPEED)
+        } else if input::is_key_down(ctx, Key::S) {
+            Some(PLAYER_SPEED)
+        } else {
+            None
+        };
+        let x = if input::is_key_down(ctx, Key::A) {
+            Some(-PLAYER_SPEED)
+        } else if input::is_key_down(ctx, Key::D) {
+            Some(PLAYER_SPEED)
+        } else {
+            None
+        };
+        let player_move = match (x, y) {
+            (Some(x), Some(y)) => {
+                let value = (PLAYER_SPEED.powi(2) / 2.0).sqrt();
+                Vec2::new(value * x.signum(), value * y.signum())
+            }
+            (Some(x), None) => Vec2::new(x, 0.0),
+            (None, Some(y)) => Vec2::new(0.0, y),
+            (None, None) => Vec2::zero(),
+        };
+        self.player.position += player_move;
+
+        // TODO check player is inside lake?
         Ok(())
     }
 
