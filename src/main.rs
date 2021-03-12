@@ -21,6 +21,29 @@ struct GameState {
     result: GameResult,
     lake: Lake,
     player: Player,
+    goblin: Godlin,
+}
+
+struct Godlin {
+    mesh: Mesh,
+    position: Vec2<f32>,
+}
+
+impl Godlin {
+    fn new(ctx: &mut Context) -> tetra::Result<Self> {
+        let radius = 5.0;
+        let mesh = Mesh::circle(ctx, ShapeStyle::Fill, Vec2::zero(), radius)?;
+        let center = Vec2::new(WINDOW_WIDTH / 2.0, Lake::center().y - Lake::radius());
+        Ok(Self {
+            mesh,
+            position: center,
+        })
+    }
+
+    fn draw(&self, ctx: &mut Context) {
+        let draw_params = DrawParams::new().position(self.position).color(Color::RED);
+        self.mesh.draw(ctx, draw_params);
+    }
 }
 
 struct Player {
@@ -80,6 +103,7 @@ impl GameState {
             result: GameResult::Playing,
             lake: Lake::new(ctx)?,
             player: Player::new(ctx)?,
+            goblin: Godlin::new(ctx)?,
         })
     }
 }
@@ -122,7 +146,6 @@ impl State for GameState {
             self.result = GameResult::PlayerWins;
         }
 
-        // TODO check player is inside lake?
         Ok(())
     }
 
@@ -132,6 +155,7 @@ impl State for GameState {
                 graphics::clear(ctx, Color::rgb8(30, 240, 30));
                 self.lake.draw(ctx);
                 self.player.draw(ctx);
+                self.goblin.draw(ctx);
             }
             GameResult::PlayerWins => {
                 graphics::clear(ctx, Color::rgb8(30, 144, 255));
