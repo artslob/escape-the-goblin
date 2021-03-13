@@ -148,6 +148,8 @@ impl State for GameState {
         let goblin_vector = self.goblin.position - Lake::center();
         let player_vector = self.player.position - Lake::center();
         let angle = goblin_vector.angle_between(player_vector); // angle in radians
+
+        // https://tutors.com/math-tutors/geometry-help/how-to-find-arc-measure-formula
         let arc_length = Lake::radius() * angle;
         if arc_length <= GOBLIN_SPEED {
             self.goblin.position =
@@ -155,10 +157,17 @@ impl State for GameState {
         } else {
             let arc_length = GOBLIN_SPEED;
             let angle = arc_length / Lake::radius();
-            // TODO fix angle calc
             // https://www.euclideanspace.com/maths/algebra/vectors/angleBetween/
+            // https://stackoverflow.com/questions/21483999/using-atan2-to-find-angle-between-two-vectors
             let angle_sign =
                 player_vector.y.atan2(player_vector.x) - goblin_vector.y.atan2(goblin_vector.x);
+            let angle_sign = if angle_sign > PI {
+                angle_sign - 2. * PI
+            } else if angle_sign <= -PI {
+                angle_sign + 2. * PI
+            } else {
+                angle_sign
+            };
             let angle = angle * angle_sign.signum();
             // https://en.wikipedia.org/wiki/Rotation_matrix
             let goblin_rotated = Vec2::new(
