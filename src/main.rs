@@ -5,10 +5,13 @@ use tetra::input::Key;
 use tetra::math::Vec2;
 use tetra::{graphics, input, Context, ContextBuilder, State, TetraError};
 
+const PI: f32 = std::f32::consts::PI;
+
 const WINDOW_WIDTH: f32 = 640.0;
 const WINDOW_HEIGHT: f32 = 480.0;
 
 const PLAYER_SPEED: f32 = 2.0;
+const GOBLIN_SPEED: f32 = PLAYER_SPEED * 4.0;
 
 #[derive(Eq, PartialEq)]
 enum GameResult {
@@ -138,6 +141,32 @@ impl State for GameState {
             (None, None) => Vec2::zero(),
         };
         self.player.position += player_move;
+
+        // 1. find arc length
+        // 2. if length < GOBLIN_SPEED, move goblin to player
+        // 3. else move goblin to GOBLIN_SPEED point
+        let goblin_vector = self.goblin.position - Lake::center();
+        let player_vector = self.player.position - Lake::center();
+        let angle = goblin_vector.angle_between(player_vector); // angle in radians
+        let arc_length = Lake::radius() * angle;
+        if arc_length <= GOBLIN_SPEED {
+            self.goblin.position =
+                Lake::center() + player_vector * (Lake::radius() / player_vector.magnitude());
+        } else {
+            let arc_length = GOBLIN_SPEED;
+            let angle = arc_length / Lake::radius();
+            // TODO fix angle calc
+            // https://www.euclideanspace.com/maths/algebra/vectors/angleBetween/
+            let angle_sign =
+                player_vector.y.atan2(player_vector.x) - goblin_vector.y.atan2(goblin_vector.x);
+            let angle = angle * angle_sign.signum();
+            // https://en.wikipedia.org/wiki/Rotation_matrix
+            let goblin_rotated = Vec2::new(
+                goblin_vector.x * angle.cos() - goblin_vector.y * angle.sin(),
+                goblin_vector.x * angle.sin() + goblin_vector.y * angle.cos(),
+            );
+            self.goblin.position = Lake::center() + goblin_rotated;
+        }
 
         if (self.player.position.x - Lake::center().x).powi(2)
             + (self.player.position.y - Lake::center().y).powi(2)
