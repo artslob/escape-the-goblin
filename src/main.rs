@@ -1,7 +1,7 @@
 use graphics::Color;
 use tetra::graphics::mesh::{Mesh, ShapeStyle};
 use tetra::graphics::DrawParams;
-use tetra::input::Key;
+use tetra::input::{Key, MouseButton};
 use tetra::math::Vec2;
 use tetra::{graphics, input, Context, ContextBuilder, State, TetraError};
 
@@ -50,7 +50,7 @@ impl HelpingCircle {
     }
 
     fn radius() -> f32 {
-        Lake::radius() / 4.0
+        Lake::radius() / (GOBLIN_SPEED / PLAYER_SPEED)
     }
 }
 
@@ -176,6 +176,19 @@ impl State for GameState {
         };
         self.player.position += player_move;
 
+        // TODO count only mouse or keyboard, but not both at same time
+        if input::is_mouse_button_down(ctx, MouseButton::Left) {
+            let mouse_position = input::get_mouse_position(ctx);
+            let difference = mouse_position - self.player.position;
+            let magnitude = difference.magnitude();
+            let position = if magnitude > PLAYER_SPEED {
+                self.player.position + difference * PLAYER_SPEED / magnitude
+            } else {
+                mouse_position
+            };
+            self.player.position = position
+        }
+
         // 1. find arc length
         // 2. if length < GOBLIN_SPEED, move goblin to player
         // 3. else move goblin to GOBLIN_SPEED point
@@ -251,6 +264,7 @@ fn main() -> tetra::Result {
         WINDOW_WIDTH as i32,
         WINDOW_HEIGHT as i32,
     )
+    .show_mouse(true)
     .build()?
     .run(GameState::new)
 }
