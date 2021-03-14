@@ -34,8 +34,7 @@ struct Goblin {
 
 impl Goblin {
     fn new(ctx: &mut Context) -> tetra::Result<Self> {
-        let radius = 5.0;
-        let mesh = Mesh::circle(ctx, ShapeStyle::Fill, Vec2::zero(), radius)?;
+        let mesh = Mesh::circle(ctx, ShapeStyle::Fill, Vec2::zero(), Self::radius())?;
         let center = Vec2::new(WINDOW_WIDTH / 2.0, Lake::center().y - Lake::radius());
         Ok(Self {
             mesh,
@@ -47,6 +46,10 @@ impl Goblin {
         let draw_params = DrawParams::new().position(self.position).color(Color::RED);
         self.mesh.draw(ctx, draw_params);
     }
+
+    fn radius() -> f32 {
+        5.0
+    }
 }
 
 struct Player {
@@ -56,8 +59,7 @@ struct Player {
 
 impl Player {
     fn new(ctx: &mut Context) -> tetra::Result<Self> {
-        let radius = 5.0;
-        let mesh = Mesh::circle(ctx, ShapeStyle::Fill, Vec2::zero(), radius)?;
+        let mesh = Mesh::circle(ctx, ShapeStyle::Fill, Vec2::zero(), Self::radius())?;
         let center = Vec2::new(WINDOW_WIDTH / 2.0, WINDOW_HEIGHT / 2.0);
         Ok(Self {
             mesh,
@@ -70,6 +72,10 @@ impl Player {
             .position(self.position)
             .color(Color::WHITE);
         self.mesh.draw(ctx, draw_params);
+    }
+
+    fn radius() -> f32 {
+        5.0
     }
 }
 
@@ -177,7 +183,10 @@ impl State for GameState {
             self.goblin.position = Lake::center() + goblin_rotated;
         }
 
-        if (self.player.position.x - Lake::center().x).powi(2)
+        let vector_between = self.player.position - self.goblin.position;
+        if vector_between.magnitude() < Player::radius() + Goblin::radius() {
+            self.result = GameResult::GoblinWins;
+        } else if (self.player.position.x - Lake::center().x).powi(2)
             + (self.player.position.y - Lake::center().y).powi(2)
             > Lake::radius().powi(2)
         {
