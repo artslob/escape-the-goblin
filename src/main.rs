@@ -25,6 +25,33 @@ struct GameState {
     lake: Lake,
     player: Player,
     goblin: Goblin,
+    helping_circle: HelpingCircle,
+}
+
+struct HelpingCircle {
+    mesh: Mesh,
+    position: Vec2<f32>,
+}
+
+impl HelpingCircle {
+    fn new(ctx: &mut Context) -> tetra::Result<Self> {
+        let mesh = Mesh::circle(ctx, ShapeStyle::Stroke(1.0), Vec2::zero(), Self::radius())?;
+        Ok(Self {
+            mesh,
+            position: Lake::center(),
+        })
+    }
+
+    fn draw(&self, ctx: &mut Context) {
+        let draw_params = DrawParams::new()
+            .position(self.position)
+            .color(Color::WHITE);
+        self.mesh.draw(ctx, draw_params);
+    }
+
+    fn radius() -> f32 {
+        Lake::radius() / 4.0
+    }
 }
 
 struct Goblin {
@@ -113,6 +140,7 @@ impl GameState {
             lake: Lake::new(ctx)?,
             player: Player::new(ctx)?,
             goblin: Goblin::new(ctx)?,
+            helping_circle: HelpingCircle::new(ctx)?,
         })
     }
 }
@@ -203,6 +231,7 @@ impl State for GameState {
                 self.lake.draw(ctx);
                 self.player.draw(ctx);
                 self.goblin.draw(ctx);
+                self.helping_circle.draw(ctx);
             }
             GameResult::PlayerWins => {
                 graphics::clear(ctx, Color::rgb8(30, 144, 255));
