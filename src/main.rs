@@ -1,5 +1,6 @@
 use graphics::Color;
 use tetra::graphics::mesh::{Mesh, ShapeStyle};
+use tetra::graphics::text::{Font, Text, VectorFontBuilder};
 use tetra::graphics::DrawParams;
 use tetra::input::{Key, MouseButton};
 use tetra::math::Vec2;
@@ -13,19 +14,11 @@ const WINDOW_HEIGHT: f32 = 480.0;
 const PLAYER_SPEED: f32 = 2.0;
 const GOBLIN_SPEED: f32 = PLAYER_SPEED * 4.0;
 
-#[derive(Eq, PartialEq)]
+// TODO allow resize window
+
 enum GameResult {
     Playing,
-    PlayerWins,
-    GoblinWins,
-}
-
-struct GameState {
-    result: GameResult,
-    lake: Lake,
-    player: Player,
-    goblin: Goblin,
-    helping_circle: HelpingCircle,
+    Ended { text: Text, background_color: Color },
 }
 
 struct HelpingCircle {
@@ -133,21 +126,37 @@ impl Lake {
     }
 }
 
+struct GameState {
+    result: GameResult,
+    lake: Lake,
+    player: Player,
+    goblin: Goblin,
+    helping_circle: HelpingCircle,
+    player_wins_text: Text,
+    goblin_wins_text: Text,
+}
+
 impl GameState {
     fn new(ctx: &mut Context) -> tetra::Result<Self> {
+        let font_builder = VectorFontBuilder::new("./fonts/NewTegomin-Regular.ttf")?;
+        let font = font_builder.with_size(ctx, 64.0)?;
+        let player_wins_text = Text::new("You win! Congrats!", font.clone());
+        let goblin_wins_text = Text::new("Goblin wins!", font.clone());
         Ok(Self {
             result: GameResult::Playing,
             lake: Lake::new(ctx)?,
             player: Player::new(ctx)?,
             goblin: Goblin::new(ctx)?,
             helping_circle: HelpingCircle::new(ctx)?,
+            player_wins_text,
+            goblin_wins_text,
         })
     }
 }
 
 impl State for GameState {
     fn update(&mut self, ctx: &mut Context) -> Result<(), TetraError> {
-        if self.result != GameResult::Playing {
+        if let GameResult::Ended { .. } = self.result {
             return Ok(());
         }
 
@@ -226,19 +235,25 @@ impl State for GameState {
 
         let vector_between = self.player.position - self.goblin.position;
         if vector_between.magnitude() < Player::radius() + Goblin::radius() {
-            self.result = GameResult::GoblinWins;
+            self.result = GameResult::Ended {
+                text: self.goblin_wins_text.clone(),
+                background_color: Color::rgb8(240, 30, 30),
+            };
         } else if (self.player.position.x - Lake::center().x).powi(2)
             + (self.player.position.y - Lake::center().y).powi(2)
             > Lake::radius().powi(2)
         {
-            self.result = GameResult::PlayerWins;
-        }
+            self.result = GameResult::Ended {
+                text: self.player_wins_text.clone(),
+                background_color: Color::rgb8(30, 144, 255),
+            };
+        };
 
         Ok(())
     }
 
     fn draw(&mut self, ctx: &mut Context) -> Result<(), TetraError> {
-        match self.result {
+        match &mut self.result {
             GameResult::Playing => {
                 graphics::clear(ctx, Color::rgb8(30, 240, 30));
                 self.lake.draw(ctx);
@@ -246,11 +261,18 @@ impl State for GameState {
                 self.goblin.draw(ctx);
                 self.helping_circle.draw(ctx);
             }
-            GameResult::PlayerWins => {
-                graphics::clear(ctx, Color::rgb8(30, 144, 255));
-            }
-            GameResult::GoblinWins => {
-                graphics::clear(ctx, Color::rgb8(240, 30, 30));
+            GameResult::Ended {
+                text,
+                background_color,
+            } => {
+                graphics::clear(ctx, *background_color);
+                // TODO draw in center
+                text.draw(
+                    ctx,
+                    DrawParams::new()
+                        .position(Vec2::new(16., 16.))
+                        .color(Color::WHITE),
+                )
             }
         }
 
