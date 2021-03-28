@@ -1,37 +1,35 @@
+use std::fmt::Display;
+
 use graphics::Color;
 use tetra::graphics::mesh::{Mesh, ShapeStyle};
 use tetra::graphics::text::{Font, Text, VectorFontBuilder};
 use tetra::graphics::{DrawParams, Rectangle};
 use tetra::input::{Key, MouseButton};
 use tetra::math::Vec2;
-use tetra::{graphics, input, Context, ContextBuilder, State, TetraError};
+use tetra::{graphics, input, Context, ContextBuilder, Event, State, TetraError};
 
 const PI: f32 = std::f32::consts::PI;
-
-const WINDOW_WIDTH: f32 = 640.0;
-const WINDOW_HEIGHT: f32 = 480.0;
 
 const PLAYER_SPEED: f32 = 2.0;
 const GOBLIN_SPEED: f32 = PLAYER_SPEED * 4.0;
 
 // TODO allow resize window
 
-enum GameResult {
-    Playing,
-    Ended { text: Text, background_color: Color },
-}
-
 struct HelpingCircle {
     mesh: Mesh,
     position: Vec2<f32>,
+    radius: f32,
 }
 
 impl HelpingCircle {
-    fn new(ctx: &mut Context) -> tetra::Result<Self> {
-        let mesh = Mesh::circle(ctx, ShapeStyle::Stroke(1.0), Vec2::zero(), Self::radius())?;
+    fn new(ctx: &mut Context, window: &Window, lake: &Lake) -> tetra::Result<Self> {
+        let radius = lake.radius / (GOBLIN_SPEED / PLAYER_SPEED);
+        let mesh = Mesh::circle(ctx, ShapeStyle::Stroke(1.0), Vec2::zero(), radius)?;
+        let position = window.center();
         Ok(Self {
             mesh,
-            position: Lake::center(),
+            radius,
+            position,
         })
     }
 
@@ -41,23 +39,22 @@ impl HelpingCircle {
             .color(Color::WHITE);
         self.mesh.draw(ctx, draw_params);
     }
-
-    fn radius() -> f32 {
-        Lake::radius() / (GOBLIN_SPEED / PLAYER_SPEED)
-    }
 }
 
 struct Goblin {
     mesh: Mesh,
     position: Vec2<f32>,
+    radius: f32,
 }
 
 impl Goblin {
-    fn new(ctx: &mut Context) -> tetra::Result<Self> {
-        let mesh = Mesh::circle(ctx, ShapeStyle::Fill, Vec2::zero(), Self::radius())?;
-        let center = Vec2::new(WINDOW_WIDTH / 2.0, Lake::center().y - Lake::radius());
+    fn new(ctx: &mut Context, window: &Window, lake: &Lake) -> tetra::Result<Self> {
+        let radius = 5.0;
+        let mesh = Mesh::circle(ctx, ShapeStyle::Fill, Vec2::zero(), radius)?;
+        let center = Vec2::new(window.width / 2.0, window.center().y - lake.radius);
         Ok(Self {
             mesh,
+            radius,
             position: center,
         })
     }
@@ -66,23 +63,22 @@ impl Goblin {
         let draw_params = DrawParams::new().position(self.position).color(Color::RED);
         self.mesh.draw(ctx, draw_params);
     }
-
-    fn radius() -> f32 {
-        5.0
-    }
 }
 
 struct Player {
     mesh: Mesh,
     position: Vec2<f32>,
+    radius: f32,
 }
 
 impl Player {
-    fn new(ctx: &mut Context) -> tetra::Result<Self> {
-        let mesh = Mesh::circle(ctx, ShapeStyle::Fill, Vec2::zero(), Self::radius())?;
-        let center = Vec2::new(WINDOW_WIDTH / 2.0, WINDOW_HEIGHT / 2.0);
+    fn new(ctx: &mut Context, window: &Window) -> tetra::Result<Self> {
+        let radius = 5.0;
+        let mesh = Mesh::circle(ctx, ShapeStyle::Fill, Vec2::zero(), radius)?;
+        let center = Vec2::new(window.width / 2.0, window.height / 2.0);
         Ok(Self {
             mesh,
+            radius,
             position: center,
         })
     }
@@ -93,40 +89,60 @@ impl Player {
             .color(Color::WHITE);
         self.mesh.draw(ctx, draw_params);
     }
-
-    fn radius() -> f32 {
-        5.0
-    }
 }
 
 struct Lake {
     mesh: Mesh,
     draw_params: DrawParams,
+    radius: f32,
 }
 
 impl Lake {
-    fn new(ctx: &mut Context) -> tetra::Result<Self> {
-        let mesh = Mesh::circle(ctx, ShapeStyle::Fill, Vec2::zero(), Self::radius())?;
+    fn new(ctx: &mut Context, window: &Window) -> tetra::Result<Self> {
+        let radius = window.height / 2.0 * 0.8;
+        let mesh = Mesh::circle(ctx, ShapeStyle::Fill, Vec2::zero(), radius)?;
         let draw_params = DrawParams::new()
-            .position(Self::center())
+            .position(window.center())
             .color(Color::rgb8(0, 0, 255));
-        Ok(Self { mesh, draw_params })
+        Ok(Self {
+            mesh,
+            draw_params,
+            radius,
+        })
     }
 
     fn draw(&self, ctx: &mut Context) {
         self.mesh.draw(ctx, self.draw_params.clone())
     }
+}
 
-    fn center() -> Vec2<f32> {
-        Vec2::new(WINDOW_WIDTH / 2.0, WINDOW_HEIGHT / 2.0)
+enum GameResult {
+    Playing,
+    Ended { text: Text, background_color: Color },
+}
+
+struct Window {
+    width: f32,
+    height: f32,
+}
+
+impl Window {
+    fn center(&self) -> Vec2<f32> {
+        Vec2::new(self.width / 2.0, self.height / 2.0)
     }
+}
 
-    fn radius() -> f32 {
-        WINDOW_HEIGHT / 2.0 * 0.8
+impl Default for Window {
+    fn default() -> Self {
+        Self {
+            width: 1280.,
+            height: 720.,
+        }
     }
 }
 
 struct GameState {
+    window: Window,
     result: GameResult,
     lake: Lake,
     player: Player,
@@ -137,17 +153,22 @@ struct GameState {
 }
 
 impl GameState {
-    fn new(ctx: &mut Context) -> tetra::Result<Self> {
+    fn new(ctx: &mut Context, window: Window) -> tetra::Result<Self> {
         let font_builder = VectorFontBuilder::new("./fonts/NewTegomin-Regular.ttf")?;
         let font = font_builder.with_size(ctx, 64.0)?;
         let player_wins_text = Text::new("You win! Congrats!", font.clone());
         let goblin_wins_text = Text::new("Goblin wins!", font.clone());
+        let lake = Lake::new(ctx, &window)?;
+        let goblin = Goblin::new(ctx, &window, &lake)?;
+        let player = Player::new(ctx, &window)?;
+        let helping_circle = HelpingCircle::new(ctx, &window, &lake)?;
         Ok(Self {
+            window,
             result: GameResult::Playing,
-            lake: Lake::new(ctx)?,
-            player: Player::new(ctx)?,
-            goblin: Goblin::new(ctx)?,
-            helping_circle: HelpingCircle::new(ctx)?,
+            lake,
+            player,
+            goblin,
+            helping_circle,
             player_wins_text,
             goblin_wins_text,
         })
@@ -198,21 +219,23 @@ impl State for GameState {
             self.player.position = position
         }
 
+        let center = self.window.center();
+
         // 1. find arc length
         // 2. if length < GOBLIN_SPEED, move goblin to player
         // 3. else move goblin to GOBLIN_SPEED point
-        let goblin_vector = self.goblin.position - Lake::center();
-        let player_vector = self.player.position - Lake::center();
+        let goblin_vector = self.goblin.position - center;
+        let player_vector = self.player.position - center;
         let angle = goblin_vector.angle_between(player_vector); // angle in radians
 
         // https://tutors.com/math-tutors/geometry-help/how-to-find-arc-measure-formula
-        let arc_length = Lake::radius() * angle;
+        let arc_length = self.lake.radius * angle;
         if arc_length <= GOBLIN_SPEED {
             self.goblin.position =
-                Lake::center() + player_vector * (Lake::radius() / player_vector.magnitude());
+                center + player_vector * (self.lake.radius / player_vector.magnitude());
         } else {
             let arc_length = GOBLIN_SPEED;
-            let angle = arc_length / Lake::radius();
+            let angle = arc_length / self.lake.radius;
             // https://www.euclideanspace.com/maths/algebra/vectors/angleBetween/
             // https://stackoverflow.com/questions/21483999/using-atan2-to-find-angle-between-two-vectors
             let angle_sign =
@@ -230,18 +253,18 @@ impl State for GameState {
                 goblin_vector.x * angle.cos() - goblin_vector.y * angle.sin(),
                 goblin_vector.x * angle.sin() + goblin_vector.y * angle.cos(),
             );
-            self.goblin.position = Lake::center() + goblin_rotated;
+            self.goblin.position = center + goblin_rotated;
         }
 
         let vector_between = self.player.position - self.goblin.position;
-        if vector_between.magnitude() < Player::radius() + Goblin::radius() {
+        if vector_between.magnitude() < self.player.radius + self.goblin.radius {
             self.result = GameResult::Ended {
                 text: self.goblin_wins_text.clone(),
                 background_color: Color::rgb8(240, 30, 30),
             };
-        } else if (self.player.position.x - Lake::center().x).powi(2)
-            + (self.player.position.y - Lake::center().y).powi(2)
-            > Lake::radius().powi(2)
+        } else if (self.player.position.x - center.x).powi(2)
+            + (self.player.position.y - center.y).powi(2)
+            > self.lake.radius.powi(2)
         {
             self.result = GameResult::Ended {
                 text: self.player_wins_text.clone(),
@@ -257,9 +280,9 @@ impl State for GameState {
             GameResult::Playing => {
                 graphics::clear(ctx, Color::rgb8(30, 240, 30));
                 self.lake.draw(ctx);
+                self.helping_circle.draw(ctx);
                 self.player.draw(ctx);
                 self.goblin.draw(ctx);
-                self.helping_circle.draw(ctx);
             }
             GameResult::Ended {
                 text,
@@ -268,8 +291,8 @@ impl State for GameState {
                 graphics::clear(ctx, *background_color);
                 let position = match text.get_bounds(ctx) {
                     Some(rect) => Vec2::new(
-                        (WINDOW_WIDTH - rect.width) / 2.,
-                        (WINDOW_HEIGHT - rect.height) / 2.,
+                        (self.window.width - rect.width) / 2.,
+                        (self.window.height - rect.height) / 2.,
                     ),
                     None => Vec2::zero(),
                 };
@@ -282,15 +305,28 @@ impl State for GameState {
 
         Ok(())
     }
+
+    fn event(&mut self, ctx: &mut Context, event: Event) -> Result<(), TetraError> {
+        if let Event::Resized { width, height } = event {
+            // TODO resize method on all game objects
+            self.window.width = width as f32;
+            self.window.height = height as f32;
+            // println!("{} {}", width, height);
+        }
+        Ok(())
+    }
 }
 
 fn main() -> tetra::Result {
+    let window = Window::default();
     ContextBuilder::new(
         "Escape the Goblin!",
-        WINDOW_WIDTH as i32,
-        WINDOW_HEIGHT as i32,
+        window.width as i32,
+        window.height as i32,
     )
+    .title("Escape the Goblin!")
     .show_mouse(true)
+    // .resizable(true)
     .build()?
-    .run(GameState::new)
+    .run(|ctx| GameState::new(ctx, window))
 }
