@@ -85,11 +85,10 @@ impl Player {
     fn new(ctx: &mut Context, window: &Window) -> tetra::Result<Self> {
         let radius = 5.0;
         let mesh = Mesh::circle(ctx, ShapeStyle::Fill, Vec2::zero(), radius)?;
-        let center = Vec2::new(window.width / 2.0, window.height / 2.0);
         Ok(Self {
             mesh,
             radius,
-            position: center,
+            position: window.center(),
         })
     }
 
@@ -98,6 +97,20 @@ impl Player {
             .position(self.position)
             .color(Color::WHITE);
         self.mesh.draw(ctx, draw_params);
+    }
+
+    fn on_window_resize(
+        &mut self,
+        ctx: &mut Context,
+        window: &Window,
+        previous_window: &Window,
+    ) -> tetra::Result {
+        self.mesh = Mesh::circle(ctx, ShapeStyle::Fill, Vec2::zero(), self.radius)?;
+        let vector = self.position - previous_window.center();
+        // new position depends on heights ratio because radius of lake depends on height
+        let ratio = window.height / previous_window.height;
+        self.position = window.center() + vector * ratio;
+        Ok(())
     }
 }
 
@@ -138,6 +151,7 @@ enum GameResult {
     Ended { text: Text, background_color: Color },
 }
 
+#[derive(Copy, Clone)]
 struct Window {
     width: f32,
     height: f32,
@@ -325,12 +339,15 @@ impl State for GameState {
 
     fn event(&mut self, ctx: &mut Context, event: Event) -> Result<(), TetraError> {
         if let Event::Resized { width, height } = event {
+            let previous_window = self.window.clone();
             // TODO resize method on all game objects
             self.window.width = width as f32;
             self.window.height = height as f32;
             self.lake.on_window_resize(ctx, &self.window)?;
             self.helping_circle
                 .on_window_resize(ctx, &self.window, &self.lake)?;
+            self.player
+                .on_window_resize(ctx, &self.window, &previous_window)?;
             // println!("{} {}", width, height);
         }
         Ok(())
