@@ -1,9 +1,7 @@
-use std::fmt::Display;
-
 use graphics::Color;
 use tetra::graphics::mesh::{Mesh, ShapeStyle};
-use tetra::graphics::text::{Font, Text, VectorFontBuilder};
-use tetra::graphics::{DrawParams, Rectangle};
+use tetra::graphics::text::{Text, VectorFontBuilder};
+use tetra::graphics::DrawParams;
 use tetra::input::{Key, MouseButton};
 use tetra::math::Vec2;
 use tetra::{graphics, input, Context, ContextBuilder, Event, State, TetraError};
@@ -38,6 +36,18 @@ impl HelpingCircle {
             .position(self.position)
             .color(Color::WHITE);
         self.mesh.draw(ctx, draw_params);
+    }
+
+    fn on_window_resize(
+        &mut self,
+        ctx: &mut Context,
+        window: &Window,
+        lake: &Lake,
+    ) -> tetra::Result {
+        self.radius = lake.radius / (GOBLIN_SPEED / PLAYER_SPEED);
+        self.position = window.center();
+        self.mesh = Mesh::circle(ctx, ShapeStyle::Stroke(1.0), Vec2::zero(), self.radius)?;
+        Ok(())
     }
 }
 
@@ -93,7 +103,7 @@ impl Player {
 
 struct Lake {
     mesh: Mesh,
-    draw_params: DrawParams,
+    position: Vec2<f32>,
     radius: f32,
 }
 
@@ -101,18 +111,25 @@ impl Lake {
     fn new(ctx: &mut Context, window: &Window) -> tetra::Result<Self> {
         let radius = window.height / 2.0 * 0.8;
         let mesh = Mesh::circle(ctx, ShapeStyle::Fill, Vec2::zero(), radius)?;
-        let draw_params = DrawParams::new()
-            .position(window.center())
-            .color(Color::rgb8(0, 0, 255));
         Ok(Self {
             mesh,
-            draw_params,
+            position: window.center(),
             radius,
         })
     }
 
     fn draw(&self, ctx: &mut Context) {
-        self.mesh.draw(ctx, self.draw_params.clone())
+        let draw_params = DrawParams::new()
+            .position(self.position)
+            .color(Color::rgb8(0, 0, 255));
+        self.mesh.draw(ctx, draw_params);
+    }
+
+    fn on_window_resize(&mut self, ctx: &mut Context, window: &Window) -> tetra::Result {
+        self.radius = window.height / 2.0 * 0.8;
+        self.position = window.center();
+        self.mesh = Mesh::circle(ctx, ShapeStyle::Fill, Vec2::zero(), self.radius)?;
+        Ok(())
     }
 }
 
@@ -311,6 +328,9 @@ impl State for GameState {
             // TODO resize method on all game objects
             self.window.width = width as f32;
             self.window.height = height as f32;
+            self.lake.on_window_resize(ctx, &self.window)?;
+            self.helping_circle
+                .on_window_resize(ctx, &self.window, &self.lake)?;
             // println!("{} {}", width, height);
         }
         Ok(())
