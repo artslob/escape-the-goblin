@@ -1,7 +1,7 @@
 use graphics::Color;
 use tetra::graphics::mesh::{Mesh, ShapeStyle};
 use tetra::graphics::text::{Font, Text, VectorFontBuilder};
-use tetra::graphics::DrawParams;
+use tetra::graphics::{DrawParams, Rectangle};
 use tetra::input::{Key, MouseButton};
 use tetra::math::Vec2;
 use tetra::{graphics, input, Context, ContextBuilder, State, TetraError};
@@ -266,12 +266,16 @@ impl State for GameState {
                 background_color,
             } => {
                 graphics::clear(ctx, *background_color);
-                // TODO draw in center
+                let position = match text.get_bounds(ctx) {
+                    Some(rect) => Vec2::new(
+                        (WINDOW_WIDTH - rect.width) / 2.,
+                        (WINDOW_HEIGHT - rect.height) / 2.,
+                    ),
+                    None => Vec2::zero(),
+                };
                 text.draw(
                     ctx,
-                    DrawParams::new()
-                        .position(Vec2::new(16., 16.))
-                        .color(Color::WHITE),
+                    DrawParams::new().position(position).color(Color::WHITE),
                 )
             }
         }
