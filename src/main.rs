@@ -234,32 +234,6 @@ impl State for GameState {
             return Ok(());
         }
 
-        let y = if input::is_key_down(ctx, Key::W) {
-            Some(-self.player.speed)
-        } else if input::is_key_down(ctx, Key::S) {
-            Some(self.player.speed)
-        } else {
-            None
-        };
-        let x = if input::is_key_down(ctx, Key::A) {
-            Some(-self.player.speed)
-        } else if input::is_key_down(ctx, Key::D) {
-            Some(self.player.speed)
-        } else {
-            None
-        };
-        let player_move = match (x, y) {
-            (Some(x), Some(y)) => {
-                let value = (self.player.speed.powi(2) / 2.0).sqrt();
-                Vec2::new(value * x.signum(), value * y.signum())
-            }
-            (Some(x), None) => Vec2::new(x, 0.0),
-            (None, Some(y)) => Vec2::new(0.0, y),
-            (None, None) => Vec2::zero(),
-        };
-        self.player.position += player_move;
-
-        // TODO count only mouse or keyboard, but not both at same time
         if input::is_mouse_button_down(ctx, MouseButton::Left) {
             let mouse_position = input::get_mouse_position(ctx);
             let difference = mouse_position - self.player.position;
@@ -270,6 +244,32 @@ impl State for GameState {
                 mouse_position
             };
             self.player.position = position
+        } else {
+            let y = if input::is_key_down(ctx, Key::W) {
+                Some(-self.player.speed)
+            } else if input::is_key_down(ctx, Key::S) {
+                Some(self.player.speed)
+            } else {
+                None
+            };
+            let x = if input::is_key_down(ctx, Key::A) {
+                Some(-self.player.speed)
+            } else if input::is_key_down(ctx, Key::D) {
+                Some(self.player.speed)
+            } else {
+                None
+            };
+            let player_move = match (x, y) {
+                (Some(x), Some(y)) => {
+                    let hypotenuse = self.player.speed;
+                    let cathetus = (hypotenuse.powi(2) / 2.0).sqrt();
+                    Vec2::new(cathetus * x.signum(), cathetus * y.signum())
+                }
+                (Some(x), None) => Vec2::new(x, 0.0),
+                (None, Some(y)) => Vec2::new(0.0, y),
+                (None, None) => Vec2::zero(),
+            };
+            self.player.position += player_move;
         }
 
         let center = self.window.center();
