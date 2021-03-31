@@ -93,6 +93,10 @@ impl Goblin {
         self.position = window.center() + vector;
         Ok(())
     }
+
+    fn reset_to_initial_state(&mut self, window: &Window, lake: &Lake) {
+        self.position = Vec2::new(window.width / 2.0, window.center().y - lake.radius);
+    }
 }
 
 struct Player {
@@ -135,6 +139,10 @@ impl Player {
         // new position depends on heights ratio because radius of lake depends on height
         self.position = window.center() + vector * ratio;
         Ok(())
+    }
+
+    fn reset_to_initial_state(&mut self, window: &Window) {
+        self.position = window.center();
     }
 }
 
@@ -231,7 +239,13 @@ impl GameState {
 impl State for GameState {
     fn update(&mut self, ctx: &mut Context) -> Result<(), TetraError> {
         if let GameResult::Ended { .. } = self.result {
-            return Ok(());
+            if input::is_key_down(ctx, Key::Space) {
+                self.result = GameResult::Playing;
+                self.player.reset_to_initial_state(&self.window);
+                self.goblin.reset_to_initial_state(&self.window, &self.lake);
+            } else {
+                return Ok(());
+            }
         }
 
         if input::is_mouse_button_down(ctx, MouseButton::Left) {
