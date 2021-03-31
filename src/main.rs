@@ -315,10 +315,7 @@ impl State for GameState {
                 text: self.goblin_wins_text.clone(),
                 background_color: Color::rgb8(240, 30, 30),
             };
-        } else if (self.player.position.x - center.x).powi(2)
-            + (self.player.position.y - center.y).powi(2)
-            > self.lake.radius.powi(2)
-        {
+        } else if (self.player.position - center).magnitude() > self.lake.radius {
             self.result = GameResult::Ended {
                 text: self.player_wins_text.clone(),
                 background_color: Color::rgb8(30, 144, 255),
