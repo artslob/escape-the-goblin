@@ -178,9 +178,63 @@ impl Lake {
     }
 }
 
+#[derive(Clone)]
+struct EndScene {
+    message: Text,
+    auxiliary_message: Text,
+    background_color: Color,
+}
+
+impl EndScene {
+    fn player_wins(ctx: &mut Context) -> tetra::Result<Self> {
+        Self::new(ctx, "You win! Congrats!", Color::rgb8(30, 144, 255))
+    }
+
+    fn goblin_wins(ctx: &mut Context) -> tetra::Result<Self> {
+        Self::new(ctx, "Goblin wins!", Color::rgb8(240, 30, 30))
+    }
+
+    fn new(ctx: &mut Context, msg: &str, color: Color) -> tetra::Result<Self> {
+        let font_builder = VectorFontBuilder::new("./fonts/NewTegomin-Regular.ttf")?;
+        let font = font_builder.with_size(ctx, 64.0)?;
+        let small_font = font_builder.with_size(ctx, 32.0)?;
+        Ok(Self {
+            message: Text::new(msg, font),
+            auxiliary_message: Text::new("To play again press Space", small_font),
+            background_color: color,
+        })
+    }
+
+    fn draw(&mut self, ctx: &mut Context, window: &Window) {
+        graphics::clear(ctx, self.background_color);
+        let main_position = Self::text_position(&mut self.message, ctx, window, 0.5);
+        let aux_position = Self::text_position(&mut self.auxiliary_message, ctx, window, 0.75);
+        let color = Color::WHITE;
+        self.message
+            .draw(ctx, DrawParams::new().position(main_position).color(color));
+        self.auxiliary_message
+            .draw(ctx, DrawParams::new().position(aux_position).color(color));
+    }
+
+    fn text_position(
+        text: &mut Text,
+        ctx: &mut Context,
+        window: &Window,
+        offset: f32,
+    ) -> Vec2<f32> {
+        match text.get_bounds(ctx) {
+            Some(rect) => Vec2::new(
+                (window.width - rect.width) / 2.,
+                window.height * offset - rect.height / 2.,
+            ),
+            None => Vec2::zero(),
+        }
+    }
+}
+
 enum GameResult {
     Playing,
-    Ended { text: Text, background_color: Color },
+    Ended(EndScene),
 }
 
 #[derive(Copy, Clone)]
@@ -209,16 +263,14 @@ struct GameState {
     player: Player,
     goblin: Goblin,
     helping_circle: HelpingCircle,
-    player_wins_text: Text,
-    goblin_wins_text: Text,
+    player_wins: EndScene,
+    goblin_wins: EndScene,
 }
 
 impl GameState {
     fn new(ctx: &mut Context, window: Window) -> tetra::Result<Self> {
-        let font_builder = VectorFontBuilder::new("./fonts/NewTegomin-Regular.ttf")?;
-        let font = font_builder.with_size(ctx, 64.0)?;
-        let player_wins_text = Text::new("You win! Congrats!", font.clone());
-        let goblin_wins_text = Text::new("Goblin wins!", font.clone());
+        let goblin_wins = EndScene::goblin_wins(ctx)?;
+        let player_wins = EndScene::player_wins(ctx)?;
         let lake = Lake::new(ctx, &window)?;
         let player = Player::new(ctx, &window)?;
         let goblin = Goblin::new(ctx, &window, &lake, &player)?;
@@ -230,8 +282,8 @@ impl GameState {
             player,
             goblin,
             helping_circle,
-            player_wins_text,
-            goblin_wins_text,
+            player_wins,
+            goblin_wins,
         })
     }
 }
@@ -325,15 +377,9 @@ impl State for GameState {
 
         let vector_between = self.player.position - self.goblin.position;
         if vector_between.magnitude() < self.player.radius + self.goblin.radius {
-            self.result = GameResult::Ended {
-                text: self.goblin_wins_text.clone(),
-                background_color: Color::rgb8(240, 30, 30),
-            };
+            self.result = GameResult::Ended(self.goblin_wins.clone());
         } else if (self.player.position - center).magnitude() > self.lake.radius {
-            self.result = GameResult::Ended {
-                text: self.player_wins_text.clone(),
-                background_color: Color::rgb8(30, 144, 255),
-            };
+            self.result = GameResult::Ended(self.player_wins.clone());
         };
 
         Ok(())
@@ -348,22 +394,8 @@ impl State for GameState {
                 self.player.draw(ctx);
                 self.goblin.draw(ctx);
             }
-            GameResult::Ended {
-                text,
-                background_color,
-            } => {
-                graphics::clear(ctx, *background_color);
-                let position = match text.get_bounds(ctx) {
-                    Some(rect) => Vec2::new(
-                        (self.window.width - rect.width) / 2.,
-                        (self.window.height - rect.height) / 2.,
-                    ),
-                    None => Vec2::zero(),
-                };
-                text.draw(
-                    ctx,
-                    DrawParams::new().position(position).color(Color::WHITE),
-                )
+            GameResult::Ended(scene) => {
+                scene.draw(ctx, &self.window);
             }
         }
 
