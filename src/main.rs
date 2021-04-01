@@ -8,6 +8,10 @@ use tetra::{graphics, input, Context, ContextBuilder, Event, State, TetraError};
 
 const PI: f32 = std::f32::consts::PI;
 
+// TODO add starting screen
+// TODO reformat code
+// TODO prohibit to minimize screen less than some size
+
 // goblin is faster than player
 const SPEED_RATIO: f32 = 4.0;
 
