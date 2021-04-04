@@ -10,10 +10,12 @@ const PI: f32 = std::f32::consts::PI;
 
 // TODO add starting screen
 // TODO reformat code
-// TODO prohibit to minimize screen less than some size
 
 // goblin is faster than player
 const SPEED_RATIO: f32 = 4.0;
+
+const MINIMAL_WINDOW_WIDTH: i32 = 640;
+const MINIMAL_WINDOW_HEIGHT: i32 = 640;
 
 struct HelpingCircle {
     mesh: Mesh,
@@ -409,6 +411,15 @@ impl State for GameState {
     fn event(&mut self, ctx: &mut Context, event: Event) -> Result<(), TetraError> {
         if let Event::Resized { width, height } = event {
             let previous_window = self.window.clone();
+            let (width, height) = if width < MINIMAL_WINDOW_WIDTH {
+                tetra::window::set_size(ctx, MINIMAL_WINDOW_WIDTH, height)?;
+                (MINIMAL_WINDOW_WIDTH, height)
+            } else if height < MINIMAL_WINDOW_HEIGHT {
+                tetra::window::set_size(ctx, width, MINIMAL_WINDOW_HEIGHT)?;
+                (width, MINIMAL_WINDOW_HEIGHT)
+            } else {
+                (width, height)
+            };
             self.window.width = width as f32;
             self.window.height = height as f32;
             self.lake.on_window_resize(ctx, &self.window)?;
