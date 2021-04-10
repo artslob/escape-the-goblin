@@ -18,6 +18,8 @@ moves 4 times faster.
 The solution is to swim in circle around center of the lake so goblin always need to catch up.
 The best circle radius is ratio of speeds: lake\`s radius / 4.
 
+[![Escape the Goblin with Rust](http://img.youtube.com/vi/25HPzlK4Da8/0.jpg)](http://www.youtube.com/watch?v=25HPzlK4Da8 "Escape the Goblin with Rust")
+
 ## Developing
 
 Installing dependencies on Linux Ubuntu:

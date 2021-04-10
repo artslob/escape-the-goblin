@@ -8,8 +8,8 @@ use tetra::{graphics, input, Context, ContextBuilder, Event, State, TetraError};
 
 const PI: f32 = std::f32::consts::PI;
 
-// TODO add starting screen
-// TODO reformat code
+// TODO add starting screen?
+// TODO refactor code
 
 // goblin is faster than player
 const SPEED_RATIO: f32 = 4.0;
@@ -275,8 +275,6 @@ struct GameState {
 
 impl GameState {
     fn new(ctx: &mut Context, window: Window) -> tetra::Result<Self> {
-        let goblin_wins = EndScene::goblin_wins(ctx)?;
-        let player_wins = EndScene::player_wins(ctx)?;
         let lake = Lake::new(ctx, &window)?;
         let player = Player::new(ctx, &window)?;
         let goblin = Goblin::new(ctx, &window, &lake, &player)?;
@@ -288,8 +286,8 @@ impl GameState {
             player,
             goblin,
             helping_circle,
-            player_wins,
-            goblin_wins,
+            player_wins: EndScene::player_wins(ctx)?,
+            goblin_wins: EndScene::goblin_wins(ctx)?,
         })
     }
 }
