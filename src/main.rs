@@ -1,4 +1,5 @@
 use graphics::Color;
+use lazy_static::lazy_static;
 use tetra::graphics::mesh::{Mesh, ShapeStyle};
 use tetra::graphics::text::{Text, VectorFontBuilder};
 use tetra::graphics::DrawParams;
@@ -16,6 +17,26 @@ const SPEED_RATIO: f32 = 4.0;
 
 const MINIMAL_WINDOW_WIDTH: i32 = 640;
 const MINIMAL_WINDOW_HEIGHT: i32 = 640;
+
+// Все элементы с черной (000000) обводкой в 1px
+
+lazy_static! {
+    static ref COLOR_GOBLIN: Color = Color::hex("A71B1B");
+    static ref COLOR_PINE: Color = Color::hex("475725");
+    static ref COLOR_BACKGROUND: Gradient = Gradient {
+        from: Color::hex("5F703B"),
+        to: Color::hex("888D4F")
+    };
+    static ref COLOR_LAKE: Gradient = Gradient {
+        from: Color::hex("415781"),
+        to: Color::hex("2C3E61")
+    };
+}
+
+struct Gradient {
+    from: Color,
+    to: Color,
+}
 
 struct HelpingCircle {
     mesh: Mesh,
@@ -81,7 +102,9 @@ impl Goblin {
     }
 
     fn draw(&self, ctx: &mut Context) {
-        let draw_params = DrawParams::new().position(self.position).color(Color::RED);
+        let draw_params = DrawParams::new()
+            .position(self.position)
+            .color(*COLOR_GOBLIN);
         self.mesh.draw(ctx, draw_params);
     }
 
@@ -172,7 +195,7 @@ impl Lake {
     fn draw(&self, ctx: &mut Context) {
         let draw_params = DrawParams::new()
             .position(self.position)
-            .color(Color::rgb8(0, 0, 255));
+            .color(COLOR_LAKE.to);
         self.mesh.draw(ctx, draw_params);
     }
 
@@ -201,7 +224,7 @@ impl EndScene {
     }
 
     fn new(ctx: &mut Context, msg: &str, color: Color) -> tetra::Result<Self> {
-        let font_builder = VectorFontBuilder::new("./fonts/NewTegomin-Regular.ttf")?;
+        let font_builder = VectorFontBuilder::new("./resources/NewTegomin-Regular.ttf")?;
         let font = font_builder.with_size(ctx, 64.0)?;
         let small_font = font_builder.with_size(ctx, 32.0)?;
         Ok(Self {
@@ -392,7 +415,7 @@ impl State for GameState {
     fn draw(&mut self, ctx: &mut Context) -> Result<(), TetraError> {
         match &mut self.result {
             GameResult::Playing => {
-                graphics::clear(ctx, Color::rgb8(30, 240, 30));
+                graphics::clear(ctx, COLOR_BACKGROUND.to);
                 self.lake.draw(ctx);
                 self.helping_circle.draw(ctx);
                 self.player.draw(ctx);
