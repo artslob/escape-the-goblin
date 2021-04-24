@@ -2,7 +2,7 @@ use graphics::Color;
 use lazy_static::lazy_static;
 use tetra::graphics::mesh::{Mesh, ShapeStyle};
 use tetra::graphics::text::{Text, VectorFontBuilder};
-use tetra::graphics::DrawParams;
+use tetra::graphics::{DrawParams, Texture};
 use tetra::input::{Key, MouseButton};
 use tetra::math::Vec2;
 use tetra::{graphics, input, Context, ContextBuilder, Event, State, TetraError};
@@ -207,6 +207,45 @@ impl Lake {
     }
 }
 
+struct PineTree {
+    texture: Texture,
+}
+
+impl PineTree {
+    fn new(ctx: &mut Context) -> tetra::Result<Self> {
+        Ok(PineTree {
+            texture: Texture::new(ctx, "./resources/pine-tree.png")?,
+        })
+    }
+
+    fn draw(&self, ctx: &mut Context, lake: &Lake) {
+        let center = lake.position;
+        let radius = lake.radius;
+        let positions = vec![
+            // left
+            Vec2::new(center.x - radius * 1.25, center.y - radius * 1.1),
+            Vec2::new(center.x - radius * 2.0, center.y - radius * 0.9),
+            Vec2::new(center.x - radius * 1.65, center.y - radius * 0.5),
+            Vec2::new(center.x - radius * 2.1, center.y + radius * 0.3),
+            Vec2::new(center.x - radius * 1.5, center.y + radius * 0.7),
+            // right
+            Vec2::new(center.x + radius * 1.1, center.y - radius * 1.0),
+            Vec2::new(center.x + radius * 1.8, center.y - radius * 0.7),
+            Vec2::new(center.x + radius * 1.25, center.y - radius * 0.2),
+            Vec2::new(center.x + radius * 1.0, center.y + radius * 0.6),
+            Vec2::new(center.x + radius * 1.75, center.y + radius * 0.35),
+        ];
+        // texture height * scale = R/2 = real height
+        let scale = lake.radius / 2.0 / self.texture.height() as f32;
+        for position in positions {
+            let draw_params = DrawParams::new()
+                .position(position)
+                .scale(Vec2::new(scale, scale));
+            self.texture.draw(ctx, draw_params);
+        }
+    }
+}
+
 #[derive(Clone)]
 struct EndScene {
     message: Text,
@@ -292,6 +331,7 @@ struct GameState {
     player: Player,
     goblin: Goblin,
     helping_circle: HelpingCircle,
+    pine_tree: PineTree,
     player_wins: EndScene,
     goblin_wins: EndScene,
 }
@@ -309,6 +349,7 @@ impl GameState {
             player,
             goblin,
             helping_circle,
+            pine_tree: PineTree::new(ctx)?,
             player_wins: EndScene::player_wins(ctx)?,
             goblin_wins: EndScene::goblin_wins(ctx)?,
         })
@@ -420,6 +461,7 @@ impl State for GameState {
                 self.helping_circle.draw(ctx);
                 self.player.draw(ctx);
                 self.goblin.draw(ctx);
+                self.pine_tree.draw(ctx, &self.lake);
             }
             GameResult::Ended(scene) => {
                 scene.draw(ctx, &self.window);
