@@ -34,6 +34,7 @@ lazy_static! {
 }
 
 struct Gradient {
+    #[allow(dead_code)]
     from: Color,
     to: Color,
 }
@@ -63,14 +64,9 @@ impl HelpingCircle {
         self.mesh.draw(ctx, draw_params);
     }
 
-    fn on_window_resize(
-        &mut self,
-        ctx: &mut Context,
-        window: &Window,
-        lake: &Lake,
-    ) -> tetra::Result {
+    fn on_window_resize(&mut self, ctx: &mut Context, lake: &Lake) -> tetra::Result {
         self.radius = lake.radius / SPEED_RATIO;
-        self.position = window.center();
+        self.position = lake.position;
         self.mesh = Mesh::circle(ctx, ShapeStyle::Stroke(1.0), Vec2::zero(), self.radius)?;
         Ok(())
     }
@@ -473,25 +469,30 @@ impl State for GameState {
 
     fn event(&mut self, ctx: &mut Context, event: Event) -> Result<(), TetraError> {
         if let Event::Resized { width, height } = event {
-            let previous_window = self.window.clone();
-            let (width, height) = if width < MINIMAL_WINDOW_WIDTH {
-                tetra::window::set_size(ctx, MINIMAL_WINDOW_WIDTH, height)?;
-                (MINIMAL_WINDOW_WIDTH, height)
-            } else if height < MINIMAL_WINDOW_HEIGHT {
-                tetra::window::set_size(ctx, width, MINIMAL_WINDOW_HEIGHT)?;
-                (width, MINIMAL_WINDOW_HEIGHT)
+            let previous_window = self.window;
+
+            self.window = if width < MINIMAL_WINDOW_WIDTH || height < MINIMAL_WINDOW_HEIGHT {
+                let width = width.max(MINIMAL_WINDOW_WIDTH);
+                let height = height.max(MINIMAL_WINDOW_HEIGHT);
+                let window = Window {
+                    width: width as f32,
+                    height: height as f32,
+                };
+                tetra::window::set_size(ctx, width, height)?;
+                window
             } else {
-                (width, height)
+                Window {
+                    width: width as f32,
+                    height: height as f32,
+                }
             };
-            self.window.width = width as f32;
-            self.window.height = height as f32;
+
             self.lake.on_window_resize(ctx, &self.window)?;
+            self.helping_circle.on_window_resize(ctx, &self.lake)?;
             self.player
                 .on_window_resize(ctx, &self.window, &previous_window)?;
             self.goblin
                 .on_window_resize(ctx, &self.window, &previous_window)?;
-            self.helping_circle
-                .on_window_resize(ctx, &self.window, &self.lake)?;
         }
         Ok(())
     }
