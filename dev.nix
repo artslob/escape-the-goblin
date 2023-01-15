@@ -8,8 +8,14 @@ pkgs.mkShell {
     pkgs.pre-commit
     pkgs.nixfmt
     pkgs.cargo
+    pkgs.rustc
+    pkgs.rustup
     pkgs.pkg-config # required to find alsa in c code
     pkgs.alsa-lib
     pkgs.SDL2
   ];
+
+  # required for codium rust-analyzer to work
+  # https://discourse.nixos.org/t/11570
+  RUST_SRC_PATH = "${pkgs.rust.packages.stable.rustPlatform.rustLibSrc}";
 }
