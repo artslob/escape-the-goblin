@@ -12,28 +12,9 @@ pkgs.mkShell rec {
     cargo
     rustc
     rustup
-    # glibc
-    # pkg-config # required to find alsa in c code
-    # alsa-lib
-    # alsa-lib.dev
-    # udev.dev
-    # alsa-lib.dev
     alsa-lib-with-plugins
-    # alsa-oss
-    # alsa-utils
-    # alsa-tools
-    # alsa-plugins
-    # alsa-ucm-conf
-    # alsa-firmware
-    # alsa-topology-conf
-    # pulseaudio.dev
-    # pavucontrol
     SDL2
-    # glxinfo
-    # mesa
     mesa.drivers
-    # libGL
-    # vulkan-tools
   ];
 
   LD_LIBRARY_PATH = pkgs.lib.makeLibraryPath buildInputs;
